@@ -11,17 +11,59 @@ from math import sqrt
 from nuscenes.eval.detection.evaluate import DetectionEval
 from nuscenes.eval.detection.config import config_factory
 from nuscenes import NuScenes
+import AveragePrecision
+
 
 class CPModel(LightningModule):
-    def __init__(self, model):
+    def __init__(self, model, cfg):
         super().__init__()
         self.model = model
+        self.cfg = cfg
+        self.average_precision = AveragePrecision()
         self.preds = []
 
     def training_step(self, batch, batch_idx):
-        loss = self.model(batch, return_loss=True)
-        loss, _ = self.parse_second_losses(loss)
+        loss, pred_boxes = self.model(batch)
+        loss, loss_elems = self.parse_second_losses(loss)
+
+        # compute ap
+        ap = self.average_precision(
+            pred_boxes[0]['box3d_lidar'], pred_boxes[0]['scores'], batch['gt_boxes_and_cls'][..., :-1].squeeze(0))
+
+        self.log('train_ap', ap)
+
         self.log("train_loss", loss)
+        self.log("train_loss_loc", loss_elems['loc_loss'])
+        self.log("train_loss_hm", loss_elems['hm_loss'])
+
+        pred_boxes = pred_boxes[0]['box3d_lidar']
+        label_boxes = batch['gt_boxes_and_cls'][..., :-1].squeeze(0)
+        # remove any rows with all zeros
+        label_boxes = label_boxes[~torch.all(label_boxes == 0.0, dim=1)]
+        ap = self.average_precision(pred_boxes, label_boxes)
+
+        return loss
+
+    def validation_step(self, batch, batch_idx):
+        loss, pred_boxes = self.model(batch)
+        loss, loss_elems = self.parse_second_losses(loss)
+
+        # compute ap
+        ap = self.average_precision(
+            pred_boxes[0]['box3d_lidar'], pred_boxes[0]['scores'], batch['gt_boxes_and_cls'][..., :-1].squeeze(0))
+
+        self.log('val_ap', ap)
+
+        self.log("val_loss", loss)
+        self.log("val_loss_loc", loss_elems['loc_loss'])
+        self.log("val_loss_hm", loss_elems['hm_loss'])
+
+        pred_boxes = pred_boxes[0]['box3d_lidar']
+        label_boxes = batch['gt_boxes_and_cls'][..., :-1].squeeze(0)
+        # remove any rows with all zeros
+        label_boxes = label_boxes[~torch.all(label_boxes == 0.0, dim=1)]
+        ap = self.average_precision(pred_boxes, label_boxes)
+
         return loss
 
     def test_step(self, batch, batch_idx):
@@ -53,17 +95,31 @@ class CPModel(LightningModule):
     def on_test_epoch_end(self):
         with open(os.path.join(self.logger.log_dir, "prediction.pkl"), "wb") as f:
             pickle.dump(self.preds, f)
-            
-        nusc = NuScenes(version='v1.0-trainval', dataroot='/home/vxm240030/nuscenes', verbose=True)
-        
-        eval = DetectionEval(nusc, config_factory("cvpr_2019"), os.path.join(self.logger.log_dir, "prediction.pkl"), 'val', self.logger.log_dir, verbose=True)
+
+        nusc = NuScenes(version='v1.0-trainval',
+                        dataroot='/home/vxm240030/nuscenes', verbose=True)
+
+        eval = DetectionEval(nusc, config_factory("cvpr_2019"), os.path.join(
+            self.logger.log_dir, "prediction.pkl"), 'val', self.logger.log_dir, verbose=True)
 
         eval.main()
+
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(
-            self.parameters(), amsgrad=0, weight_decay=0.05, betas=(0.9, 0.99), lr=0.0001)
+            self.parameters(),
+            amsgrad=self.cfg.optimizer.amsgrad,
+            weight_decay=self.cfg.optimizer.wd,
+            betas=(0.9, 0.99),
+            lr=self.cfg.lr_scheduler.lr_max)
+
         scheduler = torch.optim.lr_scheduler.OneCycleLR(
-            optimizer, max_lr=0.0001, total_steps=self.trainer.estimated_stepping_batches, max_momentum=0.95, base_momentum=0.9, div_factor=10.0, pct_start=0.4)
+            optimizer,
+            max_lr=self.cfg.lr_scheduler.lr_max,
+            total_steps=self.trainer.estimated_stepping_batches,
+            max_momentum=self.cfg.lr_scheduler.moms[0],
+            base_momentum=self.cfg.lr_scheduler.moms[1],
+            div_factor=self.cfg.lr_scheduler.div_factor,
+            pct_start=self.cfg.lr_scheduler.pct_start)
         return {
             'optimizer': optimizer,
             'lr_scheduler': {

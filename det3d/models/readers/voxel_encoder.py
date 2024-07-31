@@ -1,7 +1,7 @@
 from torch import nn
 from torch.nn import functional as F
 
-from ..second_stage.registry import READERS
+from ..registry import READERS
 
 
 

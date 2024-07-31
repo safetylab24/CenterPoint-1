@@ -1,4 +1,4 @@
-from ..second_stage.registry import DETECTORS
+from ..registry import DETECTORS
 from .single_stage import SingleStageDetector
 from det3d.torchie.trainer import load_checkpoint
 import torch 

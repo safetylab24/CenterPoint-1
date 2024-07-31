@@ -15,7 +15,7 @@ from det3d.models.utils import Empty, GroupNorm, Sequential
 from det3d.models.utils import change_default_args
 
 from .. import builder
-from ..second_stage.registry import NECKS
+from ..registry import NECKS
 from ..utils import build_norm_layer
 
 

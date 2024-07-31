@@ -8,7 +8,7 @@ import torch
 from det3d.models.utils import get_paddings_indicator
 from torch import nn
 from torch.nn import functional as F
-from ..second_stage.registry import BACKBONES, READERS
+from ..registry import BACKBONES, READERS
 from ..utils import build_norm_layer
 
 

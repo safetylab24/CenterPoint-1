@@ -1,7 +1,7 @@
 import torch
 from torch import nn
 
-from .registry import SECOND_STAGE
+from ..registry import SECOND_STAGE
 from det3d.core.utils.center_utils import (
     bilinear_interpolate_torch,
 )

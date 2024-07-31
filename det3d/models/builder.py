@@ -1,7 +1,7 @@
 from det3d.utils import build_from_cfg
 from torch import nn
 
-from .second_stage.registry import (
+from .registry import (
     BACKBONES,
     DETECTORS,
     HEADS,

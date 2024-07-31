@@ -1,6 +1,6 @@
 from det3d.core.utils.scatter import scatter_mean
 from torch.nn import functional as F
-from ..second_stage.registry import READERS
+from ..registry import READERS
 from torch import nn
 import numpy as np
 import torch 

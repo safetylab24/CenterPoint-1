@@ -10,6 +10,7 @@ import os
 from det3d.torchie import Config
 import torch
 from det3d.models.detectors.modelmodule import CPModel
+from det3d.models.detectors.datamodule import DataModule
 from det3d.datasets import build_dataset
 from torch.utils.data import DataLoader
 from det3d.models import build_detector
@@ -32,29 +33,20 @@ def main():
     )
 
     hyperparameters = {
-        'epochs': 40,
-        'batch_size': 12,
-        'lr': 0.0001,
-        'base_momentum': 0.85,
-        'max_momentum': 0.95,
-        'weight_decay': 0.05,
-        'num_workers': 2,
+        'epochs': cfg.total_epochs,
+        'batch_size': cfg.data.samples_per_gpu,
+        'lr_max': cfg.lr_config.lr_max,
+        'base_momentum': cfg.lr_config.moms[1],
+        'max_momentum': cfg.lr_config[0],
+        'weight_decay': cfg.optimizer.wd,
+        'num_workers': cfg.data.samples_per_gpu,
     }
 
     model = build_detector(
         cfg.model, train_cfg=cfg.train_cfg, test_cfg=cfg.test_cfg)
 
-    modelmodule = CPModel(model)
-
-    dataset = build_dataset(cfg.data.train)
-    data_loader = DataLoader(
-        dataset=dataset,
-        batch_size=hyperparameters['batch_size'],
-        shuffle=True,
-        num_workers=hyperparameters['num_workers'],
-        collate_fn=collate_kitti,
-        pin_memory=True,
-    )
+    modelmodule = CPModel(model, cfg)
+    datamodule = DataModule(cfg)
 
     logger.log_hyperparams(hyperparameters)
 
@@ -78,20 +70,21 @@ def main():
     trainer = Trainer(
         accelerator='gpu',
         devices=[0, 1, 2, 3],
-        max_epochs=hyperparameters['epochs'],
+        max_epochs=cfg.total_epochs,
         strategy=DDPStrategy(find_unused_parameters=False),
         logger=logger,
         log_every_n_steps=10,
         callbacks=[checkpointer, lr_monitor, model_summary],
     )
 
-    print('Hyperparameters:', hyperparameters)
-    print('Logger version:', logger.version)
-    print('Log dir:', logger.log_dir)
+    # print('Hyperparameters:', hyperparameters)
+    # print('Logger version:', logger.version)
+    # print('Log dir:', logger.log_dir)
 
     trainer.fit(
         model=modelmodule,
-        train_dataloaders=data_loader,
+        datamodule=datamodule,
+        ckpt_path=cfg.load_from
     )
 
     print('TRAINING DONE')

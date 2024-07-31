@@ -60,7 +60,7 @@ def create_groundtruth_database(
             if virtual:
                 dbinfo_path = root_path / f"dbinfos_train_{nsweeps}sweeps_withvelo_virtual.pkl"
             else:
-                dbinfo_path = root_path / f"dbinfos_train_{nsweeps}sweeps_withvelo.pkl"
+                dbinfo_path = root_path / f"dbinfos_val_{nsweeps}sweeps_withvelo.pkl"
     else:
         raise NotImplementedError()
 

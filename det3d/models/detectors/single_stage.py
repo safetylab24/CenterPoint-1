@@ -1,7 +1,7 @@
 import torch.nn as nn
 
 from .. import builder
-from ..second_stage.registry import DETECTORS
+from ..registry import DETECTORS
 from .base import BaseDetector
 from ..utils.finetune_utils import FrozenBatchNorm2d
 from det3d.torchie.trainer import load_checkpoint

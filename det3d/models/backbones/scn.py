@@ -11,7 +11,7 @@ except:
 from torch import nn
 from torch.nn import functional as F
 
-from ..second_stage.registry import BACKBONES
+from ..registry import BACKBONES
 from ..utils import build_norm_layer
 
 def replace_feature(out, new_features):

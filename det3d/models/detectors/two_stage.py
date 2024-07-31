@@ -1,5 +1,5 @@
 from det3d.core.bbox import box_torch_ops
-from ..second_stage.registry import DETECTORS
+from ..registry import DETECTORS
 from .base import BaseDetector
 from .. import builder
 import torch 

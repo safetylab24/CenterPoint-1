@@ -13,7 +13,7 @@ def nuscenes_data_prep(root_path, version, nsweeps=10, filter_zero=True, virtual
     create_groundtruth_database(
         "NUSC",
         root_path,
-        Path(root_path) / "infos_train_{:02d}sweeps_withvelo_filter_True.pkl".format(nsweeps),
+        Path(root_path) / "infos_val_{:02d}sweeps_withvelo_filter_True.pkl".format(nsweeps),
         nsweeps=nsweeps,
         virtual=virtual
     )
